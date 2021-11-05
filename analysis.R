@@ -67,8 +67,8 @@ green_values <- mock_credit %>%
 
 
 green_pal <- scales::col_numeric(
-  palette = c("white", "green"), 
-  domain = range(0, max(green_values))
+  palette = c("#f2ffed", "green"), 
+  domain = range(min(green_values), max(green_values))
 )
 
 
@@ -89,15 +89,15 @@ for (i in 1:(ncol(tbl) - 1)) {
           rows = j
         )
       )
-
+    
   }
   
 }
 
 
-# Pink ("Bad") Formatting -------------------------------------------------
+# Red ("Bad") Formatting -------------------------------------------------
 
-pink_values <- mock_credit %>% 
+red_values <- mock_credit %>% 
   migrate::migrate(
     id = customer_id, 
     time = date, 
@@ -110,9 +110,9 @@ pink_values <- mock_credit %>%
   unique() 
 
 
-pink_pal <- scales::col_numeric(
-  palette = c("white", "pink"), 
-  domain = range(0, max(pink_values))
+red_pal <- scales::col_numeric(
+  palette = c("#ffe7e6", "#ff746b"), 
+  domain = range(min(red_values), max(red_values))
 )
 
 for (i in 2:(ncol(tbl))) {
@@ -124,7 +124,7 @@ for (i in 2:(ncol(tbl))) {
     gt <- gt %>%
       gt::tab_style(
         style = gt::cell_fill(
-          color = as.character(pink_pal(cur_val)),
+          color = as.character(red_pal(cur_val)),
         ),
         locations = gt::cells_body(
           columns = names(tbl)[i],
@@ -137,6 +137,20 @@ for (i in 2:(ncol(tbl))) {
 }
 
 
+for (i in 1:ncol(tbl)) {
+  
+  gt <- gt %>% 
+    gt::tab_style(
+      style = gt::cell_fill(color = "white"),
+      locations = gt::cells_body(
+        columns = names(tbl)[i],
+        rows = eval(parse(text = paste0(names(tbl)[i], " == 0")))
+      )
+    )
+  
+}
+
+gt
 
 # Format as Percentages ---------------------------------------------------
 
