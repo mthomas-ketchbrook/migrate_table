@@ -4,6 +4,47 @@ library(migrate)
 library(gt)
 library(tibble)
 library(gtExtras)
+library(dplyr)
+library(scales)
+
+
+library(RSocrata)
+
+query_cols <- paste(
+  "town", 
+  "rating_date", 
+  "bond_rating", 
+  sep = ", "
+)
+
+df <- RSocrata::read.socrata(
+  url = glue::glue(
+    "https://data.ct.gov/resource/3w9d-7jbi.csv?", 
+    "$where=rating_agency like '%Moody%'&",   # filter for only Moody's Ratings
+    "$select={query_cols}"   # select only desired columns
+  )
+)
+
+moodys_ratings <- c(
+  ""
+)
+
+clean_df <- df %>% 
+  dplyr::mutate(rating_date = as.Date(rating_date)) %>% 
+  dplyr::arrange(town, rating_date) %>% 
+  dplyr::distinct(town, rating_date, .keep_all = TRUE) %>% 
+  dplyr::group_by(town) %>% 
+  dplyr::filter(dplyr::n() == 2) %>% 
+  dply
+
+clean_df %>% 
+  migrate::migrate(
+    id = town, 
+    time = date, 
+    state = bond_rating
+  )
+
+
 
 # Load package data
 data(mock_credit)
@@ -27,12 +68,8 @@ tbl <- mock_credit %>%
 
 
 gt <- tbl %>% 
-  # tibble::rownames_to_column(var = "Start") %>% 
-  # dplyr::mutate(row_label = "STARTING RISK RATING") %>% 
   gt::gt(
-    # rowname_col = "Start", 
     rownames_to_stub = TRUE
-    # groupname_col = "row_label"
   ) %>% 
   gt::tab_spanner(
     label = "ENDING RISK RATING", 
@@ -159,9 +196,10 @@ zero_replace <- paste(
   collapse = ""
 )
 
-gt %>% 
+gt <- gt %>% 
   gt::fmt(
     columns = gt::everything(), 
     fns = function(x) ifelse(x == 0, zero_replace, scales::percent(x, accuracy = 0.01))
   )
 
+gt 
