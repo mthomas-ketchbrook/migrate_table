@@ -67,6 +67,60 @@ gt <- tbl %>%
 # )
 
 
+green_values <- mock_credit %>% 
+  migrate::migrate(
+    id = customer_id, 
+    time = date, 
+    state = risk_rating, 
+    metric = principal_balance, 
+    verbose = FALSE
+  ) %>% 
+  dplyr::filter(risk_rating_start < risk_rating_end) %>% 
+  dplyr::pull(principal_balance) %>% 
+  unique() 
+
+
+green_pal <- scales::col_numeric(
+  palette = c("white", "green"), 
+  domain = range(0, max(green_values))
+)
+
+
+
+for (i in 1:(ncol(tbl) - 1)) {
+  
+  for (j in (i + 1):(nrow(tbl))) {
+    
+    cur_val <- as.data.frame(tbl)[j, i]
+    
+    # print(cur_val)
+    
+    gt <- gt %>%
+      gt::tab_style(
+        style = gt::cell_fill(
+          color = as.character(green_pal(cur_val)),
+          # alpha = 0.5
+        ),
+        locations = gt::cells_body(
+          columns = names(tbl)[i],
+          rows = j
+        )
+      ) # %>%
+      # gt::tab_style(
+      #   style = gt::cell_fill(color = "white"),
+      #   locations = gt::cells_body(
+      #     columns = names(tbl)[i],
+      #     rows = eval(parse(text = paste0(names(tbl)[i], " == 0")))
+      #   )
+      # )
+    
+    
+  }
+  
+}
+
+
+
 
 for (i in 1:(ncol(tbl) - 1)) {
   
@@ -74,7 +128,10 @@ for (i in 1:(ncol(tbl) - 1)) {
   
   gt <- gt %>% 
     gt::tab_style(
-      style = gt::cell_fill(color = "red"),
+      style = gt::cell_fill(
+        color = "green",
+        alpha = 0.5
+      ),
       locations = gt::cells_body(
         columns = names(tbl)[i],
         rows = (i + 1):7
@@ -93,12 +150,12 @@ for (i in 1:(ncol(tbl) - 1)) {
 gt
 
 for (i in 2:(ncol(tbl))) {
-  
+
   # cur_col_name <- names(tbl)[i]
   
   gt <- gt %>% 
     gt::tab_style(
-      style = gt::cell_fill(color = "green"),
+      style = gt::cell_fill(color = "pink"),
       locations = gt::cells_body(
         columns = names(tbl)[i],
         rows = 1:(i - 1)
@@ -114,10 +171,10 @@ for (i in 2:(ncol(tbl))) {
   
 }
 
+gt
 
 
-
-red_values <- mock_credit %>% 
+green_values <- mock_credit %>% 
   migrate::migrate(
     id = customer_id, 
     time = date, 
@@ -128,6 +185,9 @@ red_values <- mock_credit %>%
   dplyr::filter(risk_rating_start < risk_rating_end) %>% 
   dplyr::pull(principal_balance) %>% 
   unique() 
+
+
+
 
 red_pal <- colorRamp(c("red", "white"))
 
