@@ -50,21 +50,7 @@ gt <- tbl %>%
       gt::cell_text(align = "center")
     ),
     locations = gt::cells_stub(rows = TRUE)
-  ) # %>% 
-# gt::data_color(
-#   columns = c(AAA, AA), 
-#   colors = scales::col_numeric(
-#     palette = c("red", "white"),
-#     domain = NULL
-#   )
-# ) %>% 
-# gt::tab_style(
-#   style = gt::cell_fill(color = "red"), 
-#   locations = gt::cells_body(
-#     columns = "AAA", 
-#     rows = 2:5
-#   )
-# )
+  )
 
 
 green_values <- mock_credit %>% 
@@ -75,7 +61,7 @@ green_values <- mock_credit %>%
     metric = principal_balance, 
     verbose = FALSE
   ) %>% 
-  dplyr::filter(risk_rating_start < risk_rating_end) %>% 
+  dplyr::filter(risk_rating_start > risk_rating_end) %>% 
   dplyr::pull(principal_balance) %>% 
   unique() 
 
@@ -93,88 +79,25 @@ for (i in 1:(ncol(tbl) - 1)) {
     
     cur_val <- as.data.frame(tbl)[j, i]
     
-    # print(cur_val)
-    
     gt <- gt %>%
       gt::tab_style(
         style = gt::cell_fill(
           color = as.character(green_pal(cur_val)),
-          # alpha = 0.5
         ),
         locations = gt::cells_body(
           columns = names(tbl)[i],
           rows = j
         )
-      ) # %>%
-      # gt::tab_style(
-      #   style = gt::cell_fill(color = "white"),
-      #   locations = gt::cells_body(
-      #     columns = names(tbl)[i],
-      #     rows = eval(parse(text = paste0(names(tbl)[i], " == 0")))
-      #   )
-      # )
-    
-    
+      )
+
   }
   
 }
 
 
+# Pink ("Bad") Formatting -------------------------------------------------
 
-
-for (i in 1:(ncol(tbl) - 1)) {
-  
-  # cur_col_name <- names(tbl)[i]
-  
-  gt <- gt %>% 
-    gt::tab_style(
-      style = gt::cell_fill(
-        color = "green",
-        alpha = 0.5
-      ),
-      locations = gt::cells_body(
-        columns = names(tbl)[i],
-        rows = (i + 1):7
-      )
-    ) %>% 
-    gt::tab_style(
-      style = gt::cell_fill(color = "white"),
-      locations = gt::cells_body(
-        columns = names(tbl)[i],
-        rows = eval(parse(text = paste0(names(tbl)[i], " == 0")))
-      )
-    )
-  
-}
-
-gt
-
-for (i in 2:(ncol(tbl))) {
-
-  # cur_col_name <- names(tbl)[i]
-  
-  gt <- gt %>% 
-    gt::tab_style(
-      style = gt::cell_fill(color = "pink"),
-      locations = gt::cells_body(
-        columns = names(tbl)[i],
-        rows = 1:(i - 1)
-      )
-    ) %>% 
-    gt::tab_style(
-      style = gt::cell_fill(color = "white"),
-      locations = gt::cells_body(
-        columns = names(tbl)[i],
-        rows = eval(parse(text = paste0(names(tbl)[i], " == 0")))
-      )
-    )
-  
-}
-
-gt
-
-
-green_values <- mock_credit %>% 
+pink_values <- mock_credit %>% 
   migrate::migrate(
     id = customer_id, 
     time = date, 
@@ -187,19 +110,44 @@ green_values <- mock_credit %>%
   unique() 
 
 
-
-
-red_pal <- colorRamp(c("red", "white"))
-
-colorRampPalette(c("blue", "red"))
-
-library(RColorBrewer)
-
-cols <- RColorBrewer::brewer.pal(
-  name = "Reds", 
-  n = length(red_values)
+pink_pal <- scales::col_numeric(
+  palette = c("white", "pink"), 
+  domain = range(0, max(pink_values))
 )
 
-mock_credit$risk_rating[1] > mock_credit$risk_rating[2]
+for (i in 2:(ncol(tbl))) {
+  
+  for (j in (1:(i - 1))) {
+    
+    cur_val <- as.data.frame(tbl)[j, i]
+    
+    gt <- gt %>%
+      gt::tab_style(
+        style = gt::cell_fill(
+          color = as.character(pink_pal(cur_val)),
+        ),
+        locations = gt::cells_body(
+          columns = names(tbl)[i],
+          rows = j
+        )
+      )
+    
+  }
+  
+}
 
+
+
+# Format as Percentages ---------------------------------------------------
+
+zero_replace <- paste(
+  rep("-", 6), 
+  collapse = ""
+)
+
+gt %>% 
+  gt::fmt(
+    columns = gt::everything(), 
+    fns = function(x) ifelse(x == 0, zero_replace, scales::percent(x, accuracy = 0.01))
+  )
 
