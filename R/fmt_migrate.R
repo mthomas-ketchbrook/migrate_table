@@ -1,8 +1,72 @@
-# Got my inspiration from this SO post:
-# https://stackoverflow.com/questions/63944953/how-to-conditionally-format-a-cell-in-a-gt-table-based-on-the-value-of-the-cel
-
-
-add_conditional_format <- function(migrated_data, matrix_data) {
+#' Conditionally Format a State Transition Matrix
+#'
+#' @description `fmt_migrate()` adds green and red color scale 
+#'   formatting (similar to what you might see in Excel) to a `gt` table that 
+#'   displays the output of `migrate::build_matrix()`
+#'
+#' @param gt The `gt` table to which the conditional formatting will be applied 
+#' @param migrated_data The data frame output from `migrate::migrate()`
+#' @param matrix_data The matrix object output from `migrate::build_matrix()`
+#'
+#' @details 
+#' In risk management (especially in finance) a popular type of tabular analysis
+#'   called a *"state transition matrix"* or *"state migration matrix"* is used
+#'   to show movement of risk in a portfolio from one time point to another. 
+#'   Calculating this risk movement and developing these matrices is the goal of 
+#'   the **{migrate}** package.
+#'   
+#' To beautify the output of `migrate::build_matrix()` and make it presentation-
+#'   ready, the **{gt}** package can serve as a great companion. However, 
+#'   applying the conditional formatting correctly can be tricky.
+#' 
+#' The inspiration for this approach (using nested 'for' loops to specify the
+#'   exact cells in the table & associated color scale values to apply to each
+#'   cell) was from edited answer to this Stack Overflow post:
+#'   https://stackoverflow.com/questions/63944953/how-to-conditionally-format-a-cell-in-a-gt-table-based-on-the-value-of-the-cel
+#'
+#' @return
+#' A `gt` table with the conditional formatted (as described in *Description*)
+#'   applied
+#'
+#' @examples
+#' \dontrun{
+#' 
+#'   library(migrate)
+#'   data(mock_credit)
+#'   
+#'   # Calculate the migration
+#'   migration <- mock_credit %>% 
+#'     migrate::migrate(
+#'       id = customer_id, 
+#'       time = date, 
+#'       state = risk_rating, 
+#'       metric = principal_balance, 
+#'       verbose = FALSE
+#'     )
+#'   
+#'   matrix <- migration %>% 
+#'     # Build the migration matrix
+#'     migrate::build_matrix(
+#'       state_start = risk_rating_start, 
+#'       state_end = risk_rating_end, 
+#'       metric = principal_balance
+#'     ) %>% 
+#'     tibble::as_tibble(rownames = NA) 
+#'   
+#'   
+#'   gt <- matrix %>% 
+#'     gt::gt(
+#'       rownames_to_stub = TRUE
+#'     )
+#'     
+#'   gt %>% 
+#'     fmt_migrate(
+#'       migrated_data = migration, 
+#'       matrix_data = matrix
+#'     )
+#'   
+#' }
+fmt_migrate <- function(gt, migrated_data, matrix_data) {
   
   state_start_name <- colnames(migrated_data)[1]
   state_end_name <- colnames(migrated_data)[2]
