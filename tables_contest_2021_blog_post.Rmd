@@ -1,0 +1,46 @@
+---
+title: |
+  [![Ketchbrook Analytics Logo](www/ka_logo_long.jpg "Visit Ketchbrook Analytics"){width=100%}](https://www.ketchbrookanalytics.com)
+  <hr>
+  Managing Credit Risk with {migrate} + {gt}
+subtitle: "An Introduction to Building Beautiful State Transition Matrices"
+output: 
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, output_file = "index.html", encoding = encoding, output_dir = "docs") })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, warning=FALSE, message=FALSE}
+library(migrate)   # easily calculate state transitions  
+library(gt)   # make nice static tables
+library(tibble)   # manage row / column name conversions
+library(dplyr)   # data prep
+library(scales)   # format values (e.g., percentages)
+```
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
