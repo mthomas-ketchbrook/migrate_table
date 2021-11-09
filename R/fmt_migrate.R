@@ -143,7 +143,7 @@ fmt_migrate <- function(gt, migrated_data, matrix_data) {
   }
   
   # Format all the zero values as filled white
-  for (i in 1:ncol(matrix)) {
+  for (i in 1:ncol(matrix_data)) {
     
     gt <- gt %>% 
       gt::tab_style(
@@ -151,6 +151,20 @@ fmt_migrate <- function(gt, migrated_data, matrix_data) {
         locations = gt::cells_body(
           columns = names(matrix_data)[i],
           rows = eval(parse(text = paste0(names(matrix_data)[i], " == 0")))
+        )
+      )
+    
+  }
+  
+  # Format all the values on the diagonal to be filled white
+  for (i in 1:ncol(matrix_data)) {
+    
+    gt <- gt %>% 
+      gt::tab_style(
+        style = gt::cell_fill(color = "white"),
+        locations = gt::cells_body(
+          columns = names(matrix_data)[i],
+          rows = i
         )
       )
     
