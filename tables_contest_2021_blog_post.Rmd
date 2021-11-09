@@ -16,6 +16,31 @@ knit: (function(inputFile, encoding) {
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+First and foremost... here's the final product:
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.alt="Risk Rating Migration Matrix built with {migrate} and {gt}"}
+library(htmltools)
+htmltools::includeHTML(path = "final_gt.html")
+```
+
+## Background
+
+Recently, [Ketchbrook Analytics](https://www.ketchbrookanalytics.com) released *version 0.4.0* of the [**{migrate}** package](https://github.com/mthomas-ketchbrook/migrate/releases/tag/0.4.0). To celebrate this new release, we wanted to showcase **{migrate}**'s functionality as part of our submission to [*RStudio's 2021 Table Contest*](https://blog.rstudio.com/2021/09/30/rstudio-table-contest-2021/).
+
+In this blog, we are going to demonstrate how to use **{migrate}** and the [**{gt}** package](https://gt.rstudio.com/) together to create beautiful *state transition matrices*.
+
+### What is a *State Transition Matrix*?
+
+Great question! A *state transition matrix* is a rectangular ${n}$ x ${n}$ matrix showing the quantity of a variable $x$ for each state ${N}$ at time $t_0$ and later at time $t_1$.
+
+For example, in the *state transition matrix* at the top of this article, 18.45% of the variable ${x}$ moved from state **AAA** at 2021-06-30 to state **AA** at 2021-09-30.
+
+*Note: in this article, we will use the terms "transition" and "migration" interchangably.*
+
+## Getting Started
+
+In addition to {migrate} and {gt}, we will use the {tibble}, {dplyr}, and {scales} packages for our analysis.
+
 ```{r libraries, warning=FALSE, message=FALSE}
 library(migrate)   # easily calculate state transitions  
 library(gt)   # make nice static tables
@@ -24,23 +49,283 @@ library(dplyr)   # data prep
 library(scales)   # format values (e.g., percentages)
 ```
 
+## Data Preparation
 
-## R Markdown
+We will use the built-in data set from the **{migrate}** package
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r mock_credit_data}
+# Load package data
+data(mock_credit)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+# Check out the a few rows of data
+mock_credit %>% 
+  dplyr::arrange(customer_id, date) %>% 
+  dplyr::slice(9:18) %>% 
+  knitr::kable()
 ```
 
-## Including Plots
+Note that the *risk_rating* variable, which we will use to represent the *state*, is (importantly) ordinal
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r show_ordinal}
+unique(mock_credit$risk_rating)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Using the `migrate()` function, we can calculate the sum of **principal_balance** for each *starting* and *ending* **risk rating** combination
+
+```{r mock_credit_migration}
+# Calculate the migration
+migration <- mock_credit %>% 
+  migrate::migrate(
+    id = customer_id, 
+    time = date, 
+    state = risk_rating, 
+    metric = principal_balance
+  )
+
+# Show the first few rows of 'migration'
+migration %>% 
+  dplyr::slice(1:5) %>% 
+  knitr::kable()
+```
+
+Once we have calculated the migration, we can build the rectangular transition matrix using the `build_matrix()` function:
+
+```{r mock_credit_matrix}
+# Build the migration matrix
+matrix <- migration %>% 
+  migrate::build_matrix(
+    state_start = risk_rating_start, 
+    state_end = risk_rating_end, 
+    metric = principal_balance
+  ) %>% 
+  tibble::as_tibble(rownames = NA)
+
+# View the matrix
+matrix
+```
+
+## Building the {gt} Table
+
+Now it's time to let the **{gt}** package work its magic!
+
+```{r mock_credit_gt}
+# Build the base table
+gt <- matrix %>%    # keep the row names
+  gt::gt(
+    rownames_to_stub = TRUE
+  )
+
+# View the base table
+gt
+```
+
+We can see that we get a basic, un-formatted {gt} table... we need to spruce it up.
+
+### Decreasing Risk Transitions
+
+First, let's apply conditional formatting to the *good* values in the matrix (i.e., where the risk state went from more risky to less risky)
+
+```{r mock_credit_green_vals}
+# Capture the unique summed *principal_balance* amounts representing risk state 
+# decreases (i.e., the *id* got less risky from time 0 to time 1)
+green_values <- migration %>% 
+  dplyr::filter(risk_rating_start > risk_rating_end) %>% 
+  dplyr::pull(principal_balance) %>% 
+  unique() 
+
+# Create a color palette function to scale input values from very light green to 
+# green
+green_pal <- scales::col_numeric(
+  palette = c("#f2ffed", "green"), 
+  domain = range(min(green_values), max(green_values))
+)
+```
+
+```{r mock_credit_green_loop}
+# Apply the `green_pal()` function to the relevant values in the matrix;
+# The nested for loops ensure the formatting applies to cells below & to the 
+# left of the matrix diagonal
+for (i in 1:(ncol(matrix) - 1)) {
+  
+  for (j in (i + 1):(nrow(matrix))) {
+    
+    cur_val <- as.data.frame(matrix)[j, i]
+    
+    gt <- gt %>%
+      gt::tab_style(
+        style = gt::cell_fill(
+          color = as.character(green_pal(cur_val)),
+        ),
+        locations = gt::cells_body(
+          columns = names(matrix)[i],
+          rows = j
+        )
+      )
+    
+  }
+  
+}
+
+# View the updated table
+gt
+```
+
+### Increasing Risk Transitions
+
+Let's now repeat the process for the *bad* transitions in the matrix
+
+```{r mock_credit_red}
+# Capture the unique summed *principal_balance* amounts representing risk state 
+# increases (i.e., the *id* got more risky from time 0 to time 1)
+red_values <- migration %>% 
+  dplyr::filter(risk_rating_start < risk_rating_end) %>% 
+  dplyr::pull(principal_balance) %>% 
+  unique() 
+
+
+red_pal <- scales::col_numeric(
+  palette = c("#ffe7e6", "#ff746b"), 
+  domain = range(min(red_values), max(red_values))
+)
+
+# Apply the `red_pal()` function to the relevant values in the matrix;
+# The nested for loops ensure the formatting applies to cells above & to the 
+# right of the matrix diagonal
+for (i in 2:(ncol(matrix))) {
+  
+  for (j in (1:(i - 1))) {
+    
+    cur_val <- as.data.frame(matrix)[j, i]
+    
+    gt <- gt %>%
+      gt::tab_style(
+        style = gt::cell_fill(
+          color = as.character(red_pal(cur_val)),
+        ),
+        locations = gt::cells_body(
+          columns = names(matrix)[i],
+          rows = j
+        )
+      )
+    
+  }
+  
+}
+
+# View the updated table
+gt
+```
+
+### Formatting Zeros & Percentages
+
+The many zero values make the table look congested. We can de-clutter the table some by formatting the zero values. First, we can overwrite their background fill color as white
+
+```{r mock_credit_zeros}
+# Format all the zero values in the table to be filled white
+for (i in 1:ncol(matrix)) {
+  
+  gt <- gt %>% 
+    gt::tab_style(
+      style = gt::cell_fill(color = "white"),
+      locations = gt::cells_body(
+        columns = names(matrix)[i],
+        rows = eval(parse(text = paste0(names(matrix)[i], " == 0")))
+      )
+    )
+  
+}
+
+# View the updated table
+gt
+```
+
+Then we can format the text in each cell so that all of the values display as percentages, except for zeros
+
+```{r}
+# Create the string to replace zeros with
+zero_replace <- paste(
+  rep("-", 5), 
+  collapse = ""
+)
+
+# Format non-zero cell values as percentages, and apply 'zero_replace' to zeros
+gt <- gt %>% 
+  gt::fmt(
+    columns = gt::everything(), 
+    fns = function(x) ifelse(x == 0, zero_replace, scales::percent(x, accuracy = 0.01))
+  )
+
+# View the updated table
+gt
+```
+
+## Final Table Formatting
+
+Now that we have the contents of our rows, columns, and cell values in a good state, we can format the title, background colors, add images, etc. The table looks good... but let's make it great!
+
+We wanted to first embed the hex logos for the **{migrate}** and **{gt}** packages as *clickable* links on either side of the title, so we first built the markdown strings that will be used 
+
+```{r hex_imgs}
+# Build the markdown to display the {migrate} hex logo to the left of the title
+migrate_hex_md <- paste0(
+  "<a href=https://github.com/mthomas-ketchbrook/migrate#migrate->", 
+  "<img src='https://raw.githubusercontent.com/mthomas-ketchbrook/migrate/master/man/figures/logo.png' ", 
+  "style='height:60px; float:left; vertical-align:middle;'>", 
+  "</a>"
+)
+
+# Build the markdown to display the {gt} hex logo to the right of the title
+gt_hex_md <- paste0(
+  "<a href=https://gt.rstudio.com/>", 
+  "<img src='https://raw.githubusercontent.com/rstudio/gt/master/man/figures/logo.svg' ", 
+  "style='height:60px; float:right; vertical-align:middle;'>", 
+  "</a>"
+)
+```
+
+Lastly, we can apply these hex logos some final formatting touches to the remainder of the table
+
+```{r}
+out <- gt %>% 
+  gt::tab_spanner(
+    label = "ENDING RISK RATING", 
+    columns = -1
+  ) %>% 
+  gt::tab_stubhead(
+    label = "STARTING RISK RATING"
+  ) %>% 
+  gt::tab_header(
+    title = gt::md(
+      paste(
+        migrate_hex_md,
+        "**Risk Rating Migration**", 
+        gt_hex_md, 
+        "<br>*2021-06-30* &#10145;&#65039; *2021-09-30*"
+      )
+    )
+  ) %>% 
+  gt::tab_style(
+    style = list(
+      gt::cell_text(align = "center")
+    ),
+    locations = gt::cells_stub(rows = TRUE)
+  ) %>% 
+  gt::tab_options(
+    heading.background.color = "#627D9F", 
+    stub.background.color = "#343635", 
+    column_labels.background.color = "#343635"
+  )
+
+# View the final gt
+out
+```
+
+
+```{r save}
+# gt::gtsave(
+#   out, 
+#   filename = "final_gt.html"
+# )
+```
+
+
