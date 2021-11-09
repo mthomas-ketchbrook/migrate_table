@@ -37,17 +37,6 @@ clean_df <- df %>%
   dplyr::arrange(town, rating_date) %>% 
   dplyr::distinct(town, rating_date, .keep_all = TRUE)
 
-clean_df %>% 
-  migrate::migrate(
-    id = town, 
-    time = rating_date, 
-    state = bond_rating
-  )
-
-
-
-# Load package data
-# data(mock_credit)
 
 # Calculate the migration
 mig <- clean_df %>% 
@@ -71,17 +60,27 @@ matrix <- mig %>%
 gt <- matrix %>% 
   gt::gt(
     rownames_to_stub = TRUE
-  ) %>% 
+  )
+
+source("R/fmt_migrate.R")
+
+gt <- gt %>% 
+  fmt_migrate(
+    migrated_data = mig, 
+    matrix_data = matrix
+  )
+
+gt <- gt %>% 
   gt::tab_spanner(
-    label = "ENDING RISK RATING", 
+    label = "ENDING BOND RATING", 
     columns = -1
   ) %>% 
   gt::tab_stubhead(
-    label = "STARTING RISK RATING"
+    label = "STARTING BOND RATING"
   ) %>% 
   gt::tab_header(
-    title = "Risk Rating Migration",  
-    subtitle = "2021-06-30 --> 2021-09-30"
+    title = "Bond Rating Migration",  
+    subtitle = "2019-07-01 --> 2021-01-01"
   ) %>% 
   gt::tab_style(
     style = list(
@@ -95,110 +94,15 @@ gt <- matrix %>%
   )
 
 
-green_values <- mig %>% 
-  dplyr::filter(bond_rating_start > bond_rating_end) %>% 
-  dplyr::pull(count) %>% 
-  unique() 
-
-
-green_pal <- scales::col_numeric(
-  palette = c("#f2ffed", "green"), 
-  domain = range(min(green_values), max(green_values))
-)
-
-
-
-for (i in 1:(ncol(matrix) - 1)) {
-  
-  for (j in (i + 1):(nrow(matrix))) {
-    
-    cur_val <- as.data.frame(matrix)[j, i]
-    
-    gt <- gt %>%
-      gt::tab_style(
-        style = gt::cell_fill(
-          color = as.character(green_pal(cur_val)),
-        ),
-        locations = gt::cells_body(
-          columns = names(matrix)[i],
-          rows = j
-        )
-      )
-    
-  }
-  
-}
-
-
-# Red ("Bad") Formatting -------------------------------------------------
-
-red_values <- mig %>% 
-  dplyr::filter(bond_rating_start < bond_rating_end) %>% 
-  dplyr::pull(count) %>% 
-  unique() 
-
-
-red_pal <- scales::col_numeric(
-  palette = c("#ffe7e6", "#ff746b"), 
-  domain = range(min(red_values), max(red_values))
-)
-
-for (i in 2:(ncol(matrix))) {
-  
-  for (j in (1:(i - 1))) {
-    
-    cur_val <- as.data.frame(matrix)[j, i]
-    
-    gt <- gt %>%
-      gt::tab_style(
-        style = gt::cell_fill(
-          color = as.character(red_pal(cur_val)),
-        ),
-        locations = gt::cells_body(
-          columns = names(matrix)[i],
-          rows = j
-        )
-      )
-    
-  }
-  
-}
-
-
-for (i in 1:ncol(matrix)) {
-  
-  gt <- gt %>% 
-    gt::tab_style(
-      style = gt::cell_fill(color = "white"),
-      locations = gt::cells_body(
-        columns = names(matrix)[i],
-        rows = eval(parse(text = paste0(names(matrix)[i], " == 0")))
-      )
-    )
-  
-}
-
-gt
-
-# Format as Percentages ---------------------------------------------------
-
 zero_replace <- paste(
-  rep("-", 6), 
+  rep("-", 3), 
   collapse = ""
 )
 
-gt_num <- gt %>% 
+gt <- gt %>% 
   gt::fmt(
     columns = gt::everything(), 
     fns = function(x) ifelse(x == 0, zero_replace, x)
   )
 
-gt_num
-
-gt_pct <- gt %>% 
-  gt::fmt(
-    columns = gt::everything(), 
-    fns = function(x) ifelse(x == 0, zero_replace, scales::percent(x, accuracy = 0.01))
-  )
-
-gt 
+gt

@@ -2,7 +2,6 @@
 library(migrate)
 library(gt)
 library(tibble)
-library(gtExtras)
 library(dplyr)
 library(scales)
 
@@ -34,11 +33,6 @@ gt <- matrix %>%
   gt::gt(
     rownames_to_stub = TRUE
   )
-
-gt <- gt::gt(
-  matrix, 
-  rownames_to_stub = TRUE
-)
 
 
 green_values <- migration %>% 
@@ -140,10 +134,22 @@ gt <- gt %>%
     fns = function(x) ifelse(x == 0, zero_replace, scales::percent(x, accuracy = 0.01))
   )
 
-gt 
 
+migrate_hex_md <- paste0(
+  "<a href=https://github.com/mthomas-ketchbrook/migrate#migrate->", 
+  "<img src='https://raw.githubusercontent.com/mthomas-ketchbrook/migrate/master/man/figures/logo.png' ", 
+  "style='height:60px; float:left; vertical-align:middle;'>", 
+  "</a>"
+)
 
-gt %>% 
+gt_hex_md <- paste0(
+  "<a href=https://gt.rstudio.com/>", 
+  "<img src='https://raw.githubusercontent.com/rstudio/gt/master/man/figures/logo.svg' ", 
+  "style='height:60px; float:right; vertical-align:middle;'>", 
+  "</a>"
+)
+
+out <- gt %>% 
   gt::tab_spanner(
     label = "ENDING RISK RATING", 
     columns = -1
@@ -152,12 +158,30 @@ gt %>%
     label = "STARTING RISK RATING"
   ) %>% 
   gt::tab_header(
-    title = "Risk Rating Migration",  
-    subtitle = "2021-06-30 --> 2021-09-30"
+    title = gt::md(
+      paste(
+        migrate_hex_md,
+        "**Risk Rating Migration**", 
+        gt_hex_md, 
+        "<br>*2021-06-30* &#10145;&#65039; *2021-09-30*"
+      )
+    )
   ) %>% 
   gt::tab_style(
     style = list(
       gt::cell_text(align = "center")
     ),
     locations = gt::cells_stub(rows = TRUE)
+  ) %>% 
+  gt::tab_options(
+    heading.background.color = "#627D9F", 
+    stub.background.color = "#343635", 
+    column_labels.background.color = "#343635"
   )
+
+out
+
+gt::gtsave(
+  out, 
+  filename = "final_gt.html"
+)
