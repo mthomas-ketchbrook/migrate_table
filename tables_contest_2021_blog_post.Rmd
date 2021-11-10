@@ -543,7 +543,7 @@ From this table, we can quickly glean a few insights:
 
 * Most towns' bond ratings stayed the same from July 2019 to January 2021, with rating **Aa2** being the most common rating (30 towns began with this rating, and all 30 of those ended with the same rating)
 * One town's bond rating worsened from **Baa2** to **Baa3**, which is a one-step rating decline
-* One town's bond rating improved from **B1** to **Baa3**, which is a two-step rating improvement
+* One town's bond rating improved from **B1** to **Ba3**, which is a one-step rating improvement
 
 *** 
 
