@@ -241,17 +241,17 @@ for (i in 1:ncol(matrix)) {
 
 # Format all the values on the diagonal to be filled white
 for (i in 1:ncol(matrix)) {
-  
-  gt <- gt %>% 
-    gt::tab_style(
-      style = gt::cell_fill(color = "white"),
-      locations = gt::cells_body(
-        columns = names(matrix)[i],
-        rows = i
+    
+    gt <- gt %>% 
+      gt::tab_style(
+        style = gt::cell_fill(color = "white"),
+        locations = gt::cells_body(
+          columns = names(matrix)[i],
+          rows = i
+        )
       )
-    )
-  
-}
+    
+  }
 
 # View the updated table
 gt
@@ -525,10 +525,14 @@ gt <- gt %>%
     columns = gt::everything(), 
     missing_text = 0
   ) %>% 
+  gt::cols_width(
+    eval(parse(text = paste0("c(", paste(colnames(mat), collapse = ", "), ") ~ gt::px(60)")))
+  ) %>% 
   gt::tab_options(
     heading.background.color = "#FFD40A", 
     stub.background.color = "#042984", 
-    column_labels.background.color = "#042984"
+    column_labels.background.color = "#042984", 
+    container.width = gt::px(1000)
   )
 
 # View the final table
